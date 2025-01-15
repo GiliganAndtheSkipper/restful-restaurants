@@ -1,0 +1,43 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "Starred Restaurants API",
+      "version": "1.0.0",
+      "description": "API for managing starred restaurants using Express.js"
+    },
+    "paths": {
+      "/starredRestaurants": {
+        "get": {
+          "summary": "Get all starred restaurants",
+          "responses": {
+            "200": {
+              "description": "A list of all starred restaurants"
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a new starred restaurant",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "restaurantId": { "type": "string" },
+                    "comment": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Starred restaurant successfully added"
+            }
+          }
+        }
+      }
+    }
+  }
+  
