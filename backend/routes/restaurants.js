@@ -1,106 +1,101 @@
 const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const router = express.Router();
+const supabase = require("../provider/supabase"); // Import Supabase client
 
 /**
- * A list of all restaurants that exist.
- * In a "real" application, this data would be maintained in a database.
+ * Feature 1: Getting a list of restaurants from Supabase
  */
-let ALL_RESTAURANTS = [
-  { id: "0b65fe74-03a9-4b37-ab09-1c8d23189273", name: "Taco Express" },
-  { id: "869c848c-7a58-4ed6-ab88-72ee2e8e677c", name: "Pho Vinason" },
-  { id: "213ca4a4-97ce-4783-917b-f94ef8315778", name: "Rondo Japanese" },
-  { id: "2334b925-802e-4161-b5dd-de53315c9325", name: "SpiceBox Indian Food" },
-  { id: "3e075c8e-7489-4fb6-b029-43a0a1b8936c", name: "Dick's Burgers" },
-  { id: "e8036613-4b72-46f6-ab5e-edd2fc7c4fe4", name: "Fremont Bowl Sushi" },
-  { id: "7f4a4fe2-58eb-4833-9e93-2dfdd1a1d91f", name: "Cafe Turko" },
-];
-
-/**
- * Feature 1: Getting a list of restaurants
- */
-router.get("/", (req, res) => {
-  res.json(ALL_RESTAURANTS);
+router.get("/", async (req, res) => {
+    const { data, error } = await supabase.from("restaurants").select("*");
+    if (error) {
+        return res.status(500).send("Error fetching restaurants: " + error.message);
+    }
+    res.json(data);
 });
 
 /**
- * Feature 2: Getting a specific restaurant
+ * Feature 2: Getting a specific restaurant from Supabase
  */
-router.get("/:id", (req, res) => {
-  const { id } = req.params;
-
-  // Find the restaurant with the matching id.
-  const restaurant = ALL_RESTAURANTS.find((restaurant) => restaurant.id === id);
-
-  // If the restaurant doesn't exist, let the client know.
-  if (!restaurant) {
-    res.sendStatus(404);
-    return;
-  }
-
-  res.json(restaurant);
+router.get("/:id", async (req, res) => {
+    const { id } = req.params;
+    const { data, error } = await supabase
+        .from("restaurants")
+        .select("*")
+        .eq("id", id)
+        .single();  // Fetch a single record
+    if (error || !data) {
+        return res.status(404).send("Restaurant not found.");
+    }
+    res.json(data);
 });
 
 /**
- * Feature 3: Adding a new restaurant
+ * Feature 3: Adding a new restaurant to Supabase
  */
-router.post("/", (req, res) => {
-  const { body } = req;
-  const { name } = body;
+router.post("/", async (req, res) => {
+    const { name } = req.body;
+    if (!name) {
+        return res.status(400).send("Restaurant name is required.");
+    }
 
-  // Generate a unique ID for the new restaurant.
-  const newId = uuidv4();
-  const newRestaurant = {
-    id: newId,
-    name,
-  };
+    const { data, error } = await supabase
+        .from("restaurants")
+        .insert([{ id: uuidv4(), name }]);
 
-  // Add the new restaurant to the list of restaurants.
-  ALL_RESTAURANTS.push(newRestaurant);
-
-  res.json(newRestaurant);
+    if (error) {
+        return res.status(500).send("Error adding restaurant: " + error.message);
+    }
+    res.status(201).json(data);
 });
 
 /**
- * Feature 4: Deleting a restaurant.
+ * Feature 4: Deleting a restaurant from Supabase
  */
-router.delete("/:id", (req, res) => {
-  const { id } = req.params;
+router.delete("/:id", async (req, res) => {
+    const { id } = req.params;
 
-  const newListOfRestaurants = ALL_RESTAURANTS.filter(
-    (restaurant) => restaurant.id !== id
-  );
+    const { data, error } = await supabase
+        .from("restaurants")
+        .delete()
+        .eq("id", id);
 
-  // The user tried to delete a restaurant that doesn't exist.
-  if (ALL_RESTAURANTS.length === newListOfRestaurants.length) {
-    res.sendStatus(404);
-    return;
-  }
+    if (error) {
+        return res.status(500).send("Error deleting restaurant: " + error.message);
+    }
 
-  ALL_RESTAURANTS = newListOfRestaurants;
+    if (data.length === 0) {
+        return res.status(404).send("Restaurant not found.");
+    }
 
-  res.sendStatus(200);
+    res.sendStatus(200);
 });
 
 /**
- * Feature 5: Updating the name of a restaurant.
+ * Feature 5: Updating the name of a restaurant in Supabase
  */
-router.put("/:id", (req, res) => {
-  const { id } = req.params;
-  const { newName } = req.body;
+router.put("/:id", async (req, res) => {
+    const { id } = req.params;
+    const { newName } = req.body;
 
-  const restaurant = ALL_RESTAURANTS.find((restaurant) => restaurant.id === id);
+    if (!newName) {
+        return res.status(400).send("New name is required.");
+    }
 
-  if (!restaurant) {
-    res.sendStatus(404);
-    return;
-  }
+    const { data, error } = await supabase
+        .from("restaurants")
+        .update({ name: newName })
+        .eq("id", id);
 
-  restaurant.name = newName;
+    if (error) {
+        return res.status(500).send("Error updating restaurant: " + error.message);
+    }
 
-  res.sendStatus(200);
+    if (data.length === 0) {
+        return res.status(404).send("Restaurant not found.");
+    }
+
+    res.status(200).send("Restaurant updated successfully.");
 });
 
-
-exports.router = router;
-exports.restaurants = ALL_RESTAURANTS;
+module.exports = router;
